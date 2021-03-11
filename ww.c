@@ -8,12 +8,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "strbuf.c"
 #define BUFFER_SIZE 64	//defines the size of the buffer that read() fills up
 #define SPACE " "		// set this to '_' to see where spaces are printed
 #define DEBUG_WW 0		//setting to 1 will print out some debugging info
 
 //Global Variables and Structs
+typedef struct {
+    size_t length;
+    size_t used;
+    char *data;
+} strbuf_t;
+
 	strbuf_t sb;
 	char *filename;
 	char *buffer;
@@ -24,6 +29,50 @@
 	struct stat data;
 	int err;
 	ssize_t nrd;
+
+int strbuf_init(strbuf_t *L, size_t length){
+	L->data = malloc(sizeof(char) * (length));
+	if (!L->data) return 1;
+
+	L->length = length;
+	L->used   = 0;
+
+	//make the first and only value of the array the null terminator
+	L->data[L->used] = '\0';
+
+	return 0;
+}
+
+
+void strbuf_destroy(strbuf_t *L){
+    free(L->data);
+}
+
+
+int strbuf_append(strbuf_t *L, char item){
+	//using (used + 1) here to account for the presence of the null terminator
+	if ((L->used + 1) == L->length) {
+		//double the array length
+		size_t size = L->length * 2;
+		char *p = realloc(L->data, sizeof(char) * size);
+		if (!p) return 1;
+
+		L->data = p;
+		L->length = size;
+
+	}
+
+	//append the item to the list
+	L->data[L->used] = item;
+	
+	//tack on the null terminator
+	L->data[L->used + 1] = '\0';
+
+	//increment used
+	++L->used;
+
+	return 0;
+}
 
 
 int wrap(int bytes_read, int bytes, int fd){
@@ -65,7 +114,7 @@ int wrap(int bytes_read, int bytes, int fd){
 					if (accumulator + 1 + sb.used > bytes && accumulator != 0){
 
 						//nothing else can be added to the current line: end it and reset the accumulator.
-						//if(DEBUG_WW) printf("\t\tline filled. accumlation = %d/%d. Line #: %d", accumulator, bytes, __LINE__);
+						if(DEBUG_WW) printf("\t\tline filled. accumlation = %d/%d. Line #: %d", accumulator, bytes, __LINE__);
 						//printf("%s", "\n");
 						write(fd, "\n", 1);
 						accumulator = 0;
@@ -107,6 +156,7 @@ int wrap(int bytes_read, int bytes, int fd){
 	
 }
 
+
 void flushBuffer(int bytes, int fd){
 	//Flushing out storage buffer.
 	if(sb.used != 0){
@@ -135,10 +185,11 @@ void flushBuffer(int bytes, int fd){
 	}
 }
 
+
 int main(int argc, char **argv){
 
 	//Intialize variables and data structures
-	int mode = 0; //0 -> stdin, 1 -> file, 2 -> could be for directory.
+	int mode = 0; //0 -> stdin, 1 -> file, 2 -> directory.
 	strbuf_init(&sb, BUFFER_SIZE);
 	buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
 	
@@ -165,7 +216,7 @@ int main(int argc, char **argv){
 	   	while (bytes_read > 0){
 	   		
 			wrap(bytes_read, bytes, 1);
-			accumulator = 0;
+			//accumulator = 0;
 			bytes_read = read(STDIN_FILENO, buffer, BUFFER_SIZE);
 	   		
 	   	} // end while loop
@@ -248,8 +299,8 @@ int main(int argc, char **argv){
 			    int fd = open(file_path, O_RDONLY);
 				printf("\toriginal file path: = %s\n", file_path);
 			    int fd1 = open(wrap_path, O_WRONLY | O_TRUNC | O_CREAT, 0666); //<- added wrap here
-			    if (fd) perror("ERROR: Path file could not be opened");
-			    if (fd1) perror("ERROR: Wrap could not be opened or created");
+			    if (fd == -1) perror("ERROR: Path file could not be opened");
+			    if (fd1 == -1) perror("ERROR: Wrap could not be opened or created");
 			    
 			    printf("\tWrap file path: %s\n", wrap_path);
 			    
@@ -258,14 +309,13 @@ int main(int argc, char **argv){
 				printf("\tnrd = %ld\n", nrd);
 			    
 			    //While there is text to be read, we write to the new file.
-			    //For now we just print "Hello" to the new file.
 			    while (nrd > 0) {
 					wrap(nrd, bytes, fd1);
 					nrd = read(fd, buffer, BUFFER_SIZE);
 			    } 
 			    
-			    if(close(fd)) perror("ERROR: File cannot be closed");
-			    if(close(fd1)) perror("ERROR: File cannot be closed");
+			    if(close(fd) == -1) perror("ERROR: File cannot be closed");
+			    if(close(fd1) == -1) perror("ERROR: File cannot be closed");
 			    	free(wrap_path);
 			    	free(file_path);
 				strcpy(buffer, "");	
@@ -274,7 +324,7 @@ int main(int argc, char **argv){
 			}
 			
 			int close_stat = closedir(d);
-			if (close_stat) perror("ERROR: Directory cannot be closed");
+			if (close_stat == -1) perror("ERROR: Directory cannot be closed");
 		} /*else {
 			perror("ERROR: Directory could not be opened.");
 		    }
