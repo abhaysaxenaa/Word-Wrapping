@@ -234,8 +234,7 @@ int main(int argc, char **argv){
 	if (mode == 1){
 		open_file = open(filename, O_RDONLY, 0);
 		if(open_file == -1)  {  
-			perror("Cannot open file");
-	      	//printf("The file cannot be opened\n");  
+			perror("ERROR: Cannot open file specified in the path.");
 	      		return EXIT_FAILURE;
 	   	} 
 
@@ -251,7 +250,7 @@ int main(int argc, char **argv){
 	   	
 	   	close_status = close(open_file);  
 		if(close_status == -1){ 
-		      	perror("Cannot close file.\n"); 
+		      	perror("ERROR: Cannot close file specified in path..\n"); 
 		    	return EXIT_FAILURE;
 		}
    	}
@@ -299,8 +298,14 @@ int main(int argc, char **argv){
 			    int fd = open(file_path, O_RDONLY);
 				printf("\toriginal file path: = %s\n", file_path);
 			    int fd1 = open(wrap_path, O_WRONLY | O_TRUNC | O_CREAT, 0666); //<- added wrap here
-			    if (fd == -1) perror("ERROR: Path file could not be opened");
-			    if (fd1 == -1) perror("ERROR: Wrap could not be opened or created");
+			    if (fd == -1){ 
+			    	perror("ERROR: Path file could not be opened");
+			    	return EXIT_FAILURE;
+			    }
+			    if (fd1 == -1){
+			    	perror("ERROR: Wrap file could not be opened or created");
+			    	return EXIT_FAILURE;
+			    }
 			    
 			    printf("\tWrap file path: %s\n", wrap_path);
 			    
@@ -314,8 +319,14 @@ int main(int argc, char **argv){
 					nrd = read(fd, buffer, BUFFER_SIZE);
 			    } 
 			    
-			    if(close(fd) == -1) perror("ERROR: File cannot be closed");
-			    if(close(fd1) == -1) perror("ERROR: File cannot be closed");
+			    if(close(fd) == -1){
+			    	perror("ERROR: File on path could not be closed");
+			    	return EXIT_FAILURE;
+			    }
+			    if(close(fd1) == -1){
+			    	perror("ERROR: Wrap file on path could not be closed");
+			    	return EXIT_FAILURE;
+			    }
 			    	free(wrap_path);
 			    	free(file_path);
 				strcpy(buffer, "");	
@@ -323,12 +334,14 @@ int main(int argc, char **argv){
 			    printf("Complete\n");
 			}
 			
-			int close_stat = closedir(d);
-			if (close_stat == -1) perror("ERROR: Directory cannot be closed");
-		} /*else {
-			perror("ERROR: Directory could not be opened.");
-		    }
-		*/
+			if (closedir(d) == -1){
+				perror("ERROR: Directory specified could not be closed");
+				return EXIT_FAILURE;
+			}
+		} else {
+			perror("ERROR: Directory specified could not be opened.");
+			return EXIT_FAILURE;
+		}
    	}
 
 	//check to see if theres anything left in storage that hasnt been sent out yet
