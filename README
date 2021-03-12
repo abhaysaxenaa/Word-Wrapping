@@ -10,16 +10,16 @@ NetID: jaf490
 Testing Strategy:
 The testing strategy for the program 'ww.c' mainly revolved around creating multiple test files, all tailored to test different edge cases. Some of the properties we check for while testing the program include...
 
-All White-Space Characters [' ', '\n', '\t', '\v', '\f', '\r' -> true for isspace] are handled appropriately
-A word isn’t truncated or divided.
-Words longer than the width of the column specified receive their own line and cause the program to return exit_failure after the word wrapping process has finished
-Multiple spaces between words become only one space
-More than two new-lines characters in the input text result in a new paragraph.
-Files that begin with multiple newlines and then some text do not include the newlines at the top of the “wrap.” file.
-Files with special and alphanumeric characters are treated as part of some word, or whatever is not true for isspace(). [For example - %^&*!@#] 
-The program functions as anticipated when the maximum line width and/or the buffer size is 1 or some very large value.
-If the file or directory doesn’t exist, report with perror().
-When the input is a directory: subdirectories, files beginning with a “.”, and files beginning with “wrap.” are all ignored.
+1. All White-Space Characters [' ', '\n', '\t', '\v', '\f', '\r' -> true for isspace] are handled appropriately
+2. A word isn’t truncated or divided.
+3. Words longer than the width of the column specified receive their own line and cause the program to return exit_failure after the word wrapping process has finished
+4. Multiple spaces between words become only one space
+5. More than two new-lines characters in the input text result in a new paragraph.
+6. Files that begin with multiple newlines and then some text do not include the newlines at the top of the “wrap.” file.
+7. Files with special and alphanumeric characters are treated as part of some word, or whatever is not true for isspace(). [For example - %^&*!@#] 
+8. The program functions as anticipated when the maximum line width and/or the buffer size is 1 or some very large value.
+9. If the file or directory doesn’t exist, report with perror().
+10.When the input is a directory: subdirectories, files beginning with a “.”, and files beginning with “wrap.” are all ignored.
 
 Our main test strategy while debugging was keeping track of the number of characters placed on each line by printing out the value of our “accumulator” variable after each line is finished. This allowed us to see if too many or too few characters were being sent to each line. We also used a SPACE macro that allowed us to switch from outputting spaces to outputting ‘_’ instead, in order to check if spaces are being printed in the correct places. We also printed out the file paths/names in order to make sure that the wrapped files will be created at the correct locations. We also created a small program to automatically verify that some of the properties listed above are true in the output. We used ‘octal dump’ as another measure, to verify each character being printed out.
 
