@@ -10,7 +10,10 @@
 
 #define BUFFER_SIZE 64	//defines the size of the buffer that read() fills up
 #define SPACE " "		// set this to '_' to see where spaces are printed
-#define DEBUG_WW 0		//setting to 1 will print out some debugging info
+
+//Systems Programming (Spring 2021) - Project 1
+//Abhay Saxena - ans192
+//Jesse Fisher - jaf490
 
 //Global Variables and Structs
 typedef struct {
@@ -161,7 +164,6 @@ void flushBuffer(int bytes, int fd){
 		accumulator += sb.used;
 		if(sb.used > bytes) exit_status = 1;
 
-
 	}
 
 	//make sure the last line ends with a newline char
@@ -190,7 +192,6 @@ int main(int argc, char **argv){
 		return EXIT_FAILURE;
 	}
 	
-	//handle argument 2 if needed
 	if (argc == 3){
 		path = argv[2];
 		err = stat(path, &data);
@@ -218,7 +219,6 @@ int main(int argc, char **argv){
 		mode = 1;
 	} else if (S_ISDIR(data.st_mode)){
 		mode = 2;
-		//Set directory variable.
 	}
    	
 	//Wrapping from text file.
@@ -256,28 +256,24 @@ int main(int argc, char **argv){
 			
 			    //Skip files with '.' and 'wrap.' prefix
 			    if ((strncmp(dir->d_name, ".", 1) == 0)){
-					printf(". prefix found in file |%s|, skipping this iteration\n", dir->d_name);
 					continue;
 				}
 			    if ((strncmp(dir->d_name, "wrap.", 5) == 0)){
-					printf("wrap. prefix found in file |%s|, skipping this iteration\n", dir->d_name);
 					continue;
 				}
 			    if(dir->d_type == DT_DIR){
-					printf("sub-directory |%s| found, skipping this iteration\n", dir->d_name);
 					continue;
 			    }
 			    
-			    //Form wrap file name.
-			    printf("File existing: %s\n", dir->d_name);
+			    //Form the wrap file name.
 				int wrap_size = strlen(path) + 7 + strlen(dir->d_name);	//calculate the array size
 			    char* wrap_path = malloc(sizeof(char)*wrap_size);			//create blank array
 				strcpy(wrap_path, path);				//copy the directory name to the wrap array
 				strcat(wrap_path, "/wrap.");			//cocat the slash and prefix to wrap
 			    strcat(wrap_path, dir->d_name);		//cocat the original file name to wrap
 
-				//construct the path to open the specified file
-				int file_path_size = strlen(path) + 2 + strlen(dir->d_name);	//calculate the array size
+				//repeat the steps above to construct the path to open the specified file
+				int file_path_size = strlen(path) + 2 + strlen(dir->d_name);
 				char* file_path = malloc(sizeof(char)*file_path_size);
 				strcpy(file_path, path);
 				strcat(file_path, "/");
@@ -285,7 +281,6 @@ int main(int argc, char **argv){
 
 			    //Opening existing file and creating the new 'wrap' prefixed file.
 			    int fd = open(file_path, O_RDONLY);
-				printf("\toriginal file path: = %s\n", file_path);
 			    int fd1 = open(wrap_path, O_WRONLY | O_TRUNC | O_CREAT, 0666); //<- added wrap here
 			    if (fd == -1){ 
 			    	perror("ERROR: Path file could not be opened");
@@ -296,15 +291,13 @@ int main(int argc, char **argv){
 			    	return EXIT_FAILURE;
 			    }
 			    
-			    printf("\tWrap file path: %s\n", wrap_path);
-			    
+				//reset global variables
 			    first_text_found = 0;
 			    space_ct = 0;
 			    newline_ct = 0;
 			    
 			    //Reading original file.
 			    nrd = read(fd, buffer, BUFFER_SIZE);
-				printf("\tnrd = %ld\n", nrd);
 			    
 			    //While there is text to be read, we write to the new file.
 			    while (nrd > 0) {
@@ -325,11 +318,11 @@ int main(int argc, char **argv){
 			    free(wrap_path);
 			    free(file_path);
 				strcpy(buffer, "");
+				//reset the global variables and strbuf_t
 				sb.used = 0;
 				sb.data[0] = '\0';	
 				accumulator = 0;
 				first_text_found = 0;
-			    printf("Complete\n");
 			}
 			
 			if (closedir(d) == -1){
@@ -345,7 +338,10 @@ int main(int argc, char **argv){
 	strbuf_destroy(&sb);
 	free(buffer);
 	
-    if (exit_status == 1) return EXIT_FAILURE;
+    if (exit_status == 1){
+		return EXIT_FAILURE;
+	}
       	
   	return EXIT_SUCCESS;
 }
+
