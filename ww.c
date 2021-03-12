@@ -35,9 +35,7 @@ int strbuf_init(strbuf_t *L, size_t length){
 	if (!L->data) return 1;
 
 	L->length = length;
-	L->used   = 0;
-
-	//make the first and only value of the array the null terminator
+	L->used = 0;
 	L->data[L->used] = '\0';
 
 	return 0;
@@ -62,13 +60,9 @@ int strbuf_append(strbuf_t *L, char item){
 
 	}
 
-	//append the item to the list
+	//append the item to the list, & move null byte
 	L->data[L->used] = item;
-	
-	//tack on the null terminator
 	L->data[L->used + 1] = '\0';
-
-	//increment used
 	++L->used;
 
 	return 0;
@@ -79,80 +73,70 @@ int wrap(int bytes_read, int bytes, int fd){
 	
 	for (int i = 0; i < bytes_read; i++){
    		
-		   //is the current character some non-whitespace?
-			if(!isspace(buffer[i])){
+		  //is the current character some non-whitespace?
+		if(!isspace(buffer[i])){
 
-				//if there was 2 or more '\n' between the previous token and the current one
-				if(newline_ct >= 2){
+			//if there was 2 or more '\n' between the previous token and the current one
+			if(newline_ct >= 2){
 
-					if(DEBUG_WW) printf("\t\tnew para. accumlation = %d/%d. Line #: %d", accumulator, bytes, __LINE__);
-					
-					//output two newline characters, this starts a new paragraph
-					//printf("%s", "\n\n");
-					write(fd, "\n\n", 2);
-					accumulator = 0;
-				}
+				//output two newline characters, this starts a new paragraph
+				write(fd, "\n\n", 2);
+				accumulator = 0;
+			}
 
-				//store the current character in the strbuf_t
-				strbuf_append(&sb, buffer[i]);
+			//store the current character in the strbuf_t. reset whitespace counters
+			strbuf_append(&sb, buffer[i]);
+			space_ct = 0;
+			newline_ct = 0;
 
-				//since we found some text, reset the space and newline counters
-				space_ct = 0;
-				newline_ct = 0;
+			//if the current char is the first char of the file, set this flag to true.
+			if(!first_text_found) first_text_found = 1;	
 
-				//if the current char is the first char of the file, set this flag to true.
-				if(!first_text_found) first_text_found = 1;	
-
-			//only whitespace characters will reach this block. 
-			//whitespace should only be processed if we found the first char in the file
-			} else if(first_text_found){
+		//only whitespace characters will reach this block. 
+		//whitespace should only be processed if we found the first char in the file
+		} else if(first_text_found){
 				
-				//check if the current char is the first whitespace following a token
-				if(newline_ct == 0 && space_ct == 0){
+			//check if the current char is the first whitespace following a token
+			if(newline_ct == 0 && space_ct == 0){
 
-					//check to see if a ' ' and the current token are too large for the current line
-					if (accumulator + 1 + sb.used > bytes && accumulator != 0){
+				//check to see if a ' ' plus the current token are too large for the current line
+				if (accumulator + 1 + sb.used > bytes && accumulator != 0){
 
-						//nothing else can be added to the current line: end it and reset the accumulator.
-						if(DEBUG_WW) printf("\t\tline filled. accumlation = %d/%d. Line #: %d", accumulator, bytes, __LINE__);
-						//printf("%s", "\n");
-						write(fd, "\n", 1);
-						accumulator = 0;
+					//nothing else can be added to the current line: end it and reset the accumulator.
+					write(fd, "\n", 1);
+					accumulator = 0;
 
+				}  else if(accumulator != 0){
 
-					}  else if(accumulator != 0){
+					//this is not the first character on the current line, so print a space first
+					write(fd, SPACE, 1);
+					accumulator++;
 
-						//this is not the first character on the current line, so print a space first
-						//printf("%s", SPACE);
-						write(fd, SPACE, 1);
-						accumulator++;
+				} 
 
-					} 
+				//output the string stored in the strbuf_t. update the accumulator.
+				write(fd, sb.data, sb.used);
+				accumulator += sb.used;
+				if(sb.used > bytes) exit_status = 1;
 
-					//output the string stored in the strbuf_t. update the accumulator.
-					//printf("%s", sb.data);
-					write(fd, sb.data, sb.used);
-					accumulator += sb.used;
-					if(sb.used > bytes) exit_status = 1;
-
-					//clear the strbuf
-					sb.used = 0;
-					sb.data[0] = '\0';
-
-				}
-
-				//see what type of whitespace the current char is, increment the relevent counter
-				if (buffer[i] == '\n'){
-					newline_ct++;	
-				} else {
-					space_ct++;
-				}
+				//clear the strbuf
+				sb.used = 0;
+				sb.data[0] = '\0';
 
 			}
+
+			//see what type of whitespace the current char is, increment the relevent counter
+			if (buffer[i] == '\n'){
+				newline_ct++;	
+			} else {
+				space_ct++;
+			}
+
+		}
    		
-   		} //end for loop
+   	} //end for loop
    		
-   		return 0;
+   	return 0;
 	
 }
 
@@ -163,26 +147,26 @@ void flushBuffer(int bytes, int fd){
 
 		if (accumulator + 1 + sb.used > bytes && accumulator != 0){
 
-			if(DEBUG_WW) printf("\t\tline filled. accumlation = %d/%d. Line #: %d", accumulator, bytes, __LINE__);
-			//printf("%s", "\n");
-			write(fd, "\n", 1);
-			
+			write(fd, "\n", 1);	
 			accumulator = 0;
 
 		}  else if(accumulator != 0){
 
-			//printf("%s", SPACE);
 			write(fd, SPACE, 1);
 			accumulator++;
 
 		} 
 
-		//printf("%s", sb.data);
 		write(fd, sb.data, sb.used);
 		accumulator += sb.used;
 		if(sb.used > bytes) exit_status = 1;
 
+
 	}
+
+	//make sure the last line ends with a newline char
+	write(fd, "\n", 1);
+
 }
 
 
@@ -190,16 +174,23 @@ int main(int argc, char **argv){
 
 	//Intialize variables and data structures
 	int mode = 0; //0 -> stdin, 1 -> file, 2 -> directory.
+	int bytes;
 	strbuf_init(&sb, BUFFER_SIZE);
 	buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
 	
 	//handle argument 1 from the command line
-	int bytes = atoi(argv[1]);
-	if (bytes <= 0){
-		printf("Invalid argument. Enter a valid byte size.\n");
+	if(argc >= 2) {
+		bytes = atoi(argv[1]);
+		if (bytes <= 0){
+			printf("Invalid argument. Enter a valid byte size.\n");
+			return EXIT_FAILURE;
+		}
+	} else {
+		printf("ERROR: insufficient number of arguments.\n");
 		return EXIT_FAILURE;
 	}
 	
+	//handle argument 2 if needed
 	if (argc == 3){
 		path = argv[2];
 		err = stat(path, &data);
@@ -216,10 +207,10 @@ int main(int argc, char **argv){
 	   	while (bytes_read > 0){
 	   		
 			wrap(bytes_read, bytes, 1);
-			//accumulator = 0;
 			bytes_read = read(STDIN_FILENO, buffer, BUFFER_SIZE);
 	   		
 	   	} // end while loop
+		flushBuffer(bytes, 1);
 
 	   	
 	} else if (S_ISREG(data.st_mode)) {
@@ -235,23 +226,21 @@ int main(int argc, char **argv){
 		open_file = open(filename, O_RDONLY, 0);
 		if(open_file == -1)  {  
 			perror("ERROR: Cannot open file specified in the path.");
-	      		return EXIT_FAILURE;
+	      	return EXIT_FAILURE;
 	   	} 
 
+		//wrap the file's text
 		bytes_read = read(open_file, buffer, BUFFER_SIZE);
-	   	
 	   	while (bytes_read > 0){
-	   		
 			wrap(bytes_read, bytes, 1);
-
 			bytes_read = read(open_file, buffer, BUFFER_SIZE);
-	   		
-	   	} // end while loop
+	   	} 
+		flushBuffer(bytes, 1);
 	   	
 	   	close_status = close(open_file);  
 		if(close_status == -1){ 
-		      	perror("ERROR: Cannot close file specified in path..\n"); 
-		    	return EXIT_FAILURE;
+		    perror("ERROR: Cannot close file specified in path..\n"); 
+		    return EXIT_FAILURE;
 		}
    	}
    	
@@ -309,6 +298,10 @@ int main(int argc, char **argv){
 			    
 			    printf("\tWrap file path: %s\n", wrap_path);
 			    
+			    first_text_found = 0;
+			    space_ct = 0;
+			    newline_ct = 0;
+			    
 			    //Reading original file.
 			    nrd = read(fd, buffer, BUFFER_SIZE);
 				printf("\tnrd = %ld\n", nrd);
@@ -318,6 +311,8 @@ int main(int argc, char **argv){
 					wrap(nrd, bytes, fd1);
 					nrd = read(fd, buffer, BUFFER_SIZE);
 			    } 
+
+				flushBuffer(bytes, fd1);
 			    
 			    if(close(fd) == -1){
 			    	perror("ERROR: File on path could not be closed");
@@ -327,10 +322,13 @@ int main(int argc, char **argv){
 			    	perror("ERROR: Wrap file on path could not be closed");
 			    	return EXIT_FAILURE;
 			    }
-			    	free(wrap_path);
-			    	free(file_path);
-				strcpy(buffer, "");	
-				accumulator = 0;	//<-replaced free(buffer);
+			    free(wrap_path);
+			    free(file_path);
+				strcpy(buffer, "");
+				sb.used = 0;
+				sb.data[0] = '\0';	
+				accumulator = 0;
+				first_text_found = 0;
 			    printf("Complete\n");
 			}
 			
@@ -343,16 +341,6 @@ int main(int argc, char **argv){
 			return EXIT_FAILURE;
 		}
    	}
-
-	//check to see if theres anything left in storage that hasnt been sent out yet
-	flushBuffer(bytes, 1); 
-				//	   ^ need to make this a variable!!!!!!
-
-	if(DEBUG_WW) printf("\t\tEOF. accumlation = %d/%d. Line #: %d", accumulator, bytes, __LINE__);
-
-	//tack on a newline after the final token.
-	printf("%s", "\n");
-
 
 	strbuf_destroy(&sb);
 	free(buffer);
