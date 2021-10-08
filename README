@@ -2,10 +2,10 @@ Systems Programming - CS214 - Spring 2021
 Project 1
 
 Name: Abhay Saxena
-NetID: ans192
+NetID:
 
 Name: Jesse Fisher
-NetID: jaf490
+NetID:
 
 Testing Strategy:
 The testing strategy for the program 'ww.c' mainly revolved around creating multiple test files, all tailored to test different edge cases. Some of the properties we check for while testing the program include...
